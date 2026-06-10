@@ -12,19 +12,20 @@ nargin = len(sys.argv) - 1
 flin=sys.argv[1]
 mshfl=sys.argv[2]
 
+meshslash=mshfl.rfind('/')+1
+TmpOutDir="STOFSInterpWeights."+mshfl[meshslash:len(mshfl)-4]
+
 #if nargin==3 then write the parallel jobcard that carries out the interpolation weight calculation
 if nargin ==3 :
     Njobs=int(sys.argv[3])
-    meshslash=mshfl.rfind('/')+1
-    TmpOutDir="STOFSInterpWeights."+mshfl[meshslash:len(mshfl)-4]
     os.makedirs(TmpOutDir, exist_ok=True)
     try:
         os.remove(TmpOutDir+"/*.txt")
     except:
-        print(TmpOutDir+" is already empty")
+        print("directory "+TmpOutDir+" is alread empty")
     mshint.WriteInterpJobscript("jobcardGeoInterpSTOFS",flin,mshfl,Njobs, 1)
     print("Made parallel jobcard to create interpolation weights with "+str(Njobs)+" processes. Next step:")
-    print("source jobcardGeoInterpSTOFS")
+    print("sbatch jobcardGeoInterpSTOFS")
     sys.exit()
 
 #if nargin==4 then do the part of the mesh for jobID of Njobs
@@ -44,9 +45,9 @@ else:
 
 meshslash=mshfl.rfind('/')+1
 if nargin <  5:
-    weights_file = "STOFSInterpWeights/Part.IntrpWghts."+str(jobID)+".txt"
+    weights_file = TmpOutDir+"/Part.IntrpWghts."+str(jobID)+".txt"
 else:
-    weights_file = "STOFSInterpWeights/Part.IntrpWghts.W"+str(lonW)+".E"+str(lonE)+".S"+str(latS)+".N"+str(latN)+"."+mshfl[meshslash:len(mshfl)-3]+"txt"
+    weights_file = TmpOutDir+"/Part.IntrpWghts.W"+str(lonW)+".E"+str(lonE)+".S"+str(latS)+".N"+str(latN)+"."+mshfl[meshslash:len(mshfl)-3]+"txt"
 
 
 print("saving output to:"+weights_file)

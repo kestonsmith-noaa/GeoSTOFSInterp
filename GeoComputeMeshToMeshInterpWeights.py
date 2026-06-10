@@ -4,17 +4,16 @@ from datetime import datetime
 
 
 import numpy as np
-import matplotlib.tri as mtri
-
+#import matplotlib.tri as mtri
+"""
 def compute_and_save_weights(x, y, triangles, x_query, y_query):
-    """
-    Computes and extracts interpolation weights and triangle indices.
+   # Computes and extracts interpolation weights and triangle indices.
     
-    :param x, y: 1D arrays of mesh vertex coordinates.
-    :param triangles: (M, 3) array of triangle connectivity.
-    :param x_query, y_query: 1D arrays of query points.
-    :return: triangle_indices, weights, valid_mask
-    """
+   # :param x, y: 1D arrays of mesh vertex coordinates.
+   # :param triangles: (M, 3) array of triangle connectivity.
+   # :param x_query, y_query: 1D arrays of query points.
+   # :return: triangle_indices, weights, valid_mask
+
     # 1. Initialize the triangulation and interpolator
     triang = mtri.Triangulation(x, y, triangles)
     interp = mtri.LinearTriInterpolator(triang, np.zeros_like(x))
@@ -57,9 +56,7 @@ def compute_and_save_weights(x, y, triangles, x_query, y_query):
 
 
 def apply_saved_weights(triangles, field_values, triangle_indices, weights, valid_mask):
-    """
-    Instantly applies saved weights to interpolate a new field.
-    """
+   # Instantly applies saved weights to interpolate a new field.
     result = np.full(len(triangle_indices), np.nan)
     
     if not np.any(valid_mask):
@@ -76,7 +73,7 @@ def apply_saved_weights(triangles, field_values, triangle_indices, weights, vali
     
     return result
 
-
+"""
 
 def IsInElement(x,y,xp,yp):
     IsIn=False
@@ -125,7 +122,7 @@ def FindElement(x,y,e,xi,yi):
             return j
         
     return j
-
+"""
 import matplotlib.tri as mtri
 def compute_mesh_to_mesh_interp_weights(x, y, e, xi, yi, flout):
 
@@ -139,7 +136,8 @@ def compute_mesh_to_mesh_interp_weights(x, y, e, xi, yi, flout):
     # Evaluate at new points (callable directly)
     z_new = linear_interp(x_new, y_new)
     
-    
+"""    
+
 def universal_len(obj):
     try:
         return len(obj)
