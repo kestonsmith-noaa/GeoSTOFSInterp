@@ -55,8 +55,11 @@ print("saving output to:"+weights_file)
 xi, yi, ei = mshutil.loadWW3Mesh(mshfl)
 nni=len(xi)
 
-#divide domain from east west based on job id=0 ... Njobs
+# divide domain from east west based on job id=0 ... Njobs
 # and make North-South window contain the full target domain
+# NOTE: for efficiency the sections of the domain should have approximately
+# the same number of destination nodes and/or the same number of source elements
+# will implement as function shortly
 if nargin <  5:
     Wdom=np.floor(np.min(xi))-1
     Edom=np.ceil( np.max(xi))+1
