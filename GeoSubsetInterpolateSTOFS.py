@@ -64,12 +64,12 @@ nni=len(xi)
 if nargin <  5:
 # balance node load for     
     xis=np.sort(xi)
-    mm=round(nni/N)
+    mm=round(nni/Njobs)
     xil=xis[range(0,nni,mm)]
     lonW=xil[jobID]
     if jobID==Njobs-1:
         lonE=xis[-1]+1.
-    else
+    else:
         lonE=xil[jobID+1]
     if jobID==0:
         lonW=xis[0]-1.
