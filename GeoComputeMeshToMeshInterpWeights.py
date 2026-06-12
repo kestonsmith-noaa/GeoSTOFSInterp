@@ -340,9 +340,8 @@ def WriteInterpJobscript(fl,flin,mshfl,Njobs, ComputeNodes):
         f.write("module load py-netcdf4/1.7.1.post2 \n")
         f.write("pip list \n")
         f.write("# calculate interpolation weights in parallel geographically \n")
-        f.write("python InterpolateSTOFS.py "+flin+" "+mshfl+" "+flout+" zeta \n")
-        f.write("python InterpolateSTOFS.py "+flinuv+" "+mshfl+" "+floutu+" u-vel \n")
-        f.write("python InterpolateSTOFS.py "+flinuv+" "+mshfl+" "+floutv+" v-vel \n")
+        f.write("python InterpolateSTOFS.py "+flin+" "+mshfl+" "+flout+" zeta 2\n")
+        f.write("python InterpolateSTOFS.py "+flinuv+" "+mshfl+" "+floutu+" u-vel:v-vel 2\n")
 
 #-rw-r----- 1 keston keston 12G Jun  9 14:45 stofs.20260608.00/stofs.cwl.nc
 #-rw-r----- 1 keston keston 25G Jun  9 14:58 stofs.20260608.00/stofs.cwl.vel.nc
