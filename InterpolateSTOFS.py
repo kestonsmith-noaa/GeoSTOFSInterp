@@ -7,57 +7,40 @@ import xarray as xr
 import scipy.sparse as sp
 from scipy.interpolate import NearestNDInterpolator
 
-def copy_netcdf(source_path, target_path):
-    # Open the source file in read mode and create the target file in write mode
-    with nc.Dataset(source_path, 'r') as src, nc.Dataset(target_path, 'w') as trg:
-        
-        # 1. Copy structural dimensions
-        for name, dim in src.dimensions.items():
-            # Check if the dimension is unlimited (like time) to maintain its behavior
-            dim_len = len(dim) if not dim.isunlimited() else None
-            trg.createDimension(name, dim_len)
+# Engine for interpolating to WW3 unstructured mesh using precomputed interpolation weights from netcdf files with forecasts
+#
+# to call:
+# python InterpolateSTOFS.py input_file meshpath outputfile variable1:variable2:variable3 ExtrapMethod
+#
+# example:
+# python InterpolateSTOFS.py stofs.20260608.00/stofs.cwl.vel.nc meshes/RWPS.V0a.small.msh tesdtoZ.vel.nc u-vel:v-vel 2
+# or:
+# python InterpolateSTOFS.py stofs.20260608.00/stofs.cwl.nc meshes/RWPS.V0a.small.msh tesdtoZ.vel.nc zeta 1
+#
 
-        # 2. Copy global file attributes
-        trg.setncatts({attr: src.getncattr(attr) for attr in src.ncattrs()})
-
-        # 3. Copy variables with their metadata and data arrays
-        for name, src_var in src.variables.items():
-            # Create the variable structure in the new file
-            trg_var = trg.createVariable(
-                name, 
-                src_var.datatype, 
-                src_var.dimensions,
-                fill_value=getattr(src_var, '_FillValue', None) # Safely handles fill values
-            )
-            
-            # Copy specific variable attributes (e.g., units, long_name)
-            var_attrs = {attr: src_var.getncattr(attr) for attr in src_var.ncattrs() if attr != '_FillValue'}
-            trg_var.setncatts(var_attrs)
-            
-            # Copy the actual numerical/data arrays
-            trg_var[:] = src_var[:]
-
-def NearestPoint(x,y,xi,yi):
-#return index of nearest (x,y) for each (xi.yi)
-    deg2kmY=111.
-    n=len(xi)
-    indx=np.zeros(n,dtype=int)
-    for k in range(n):
-        deg2kmX=np.cos( np.pi * yi[k] / 180.)*deg2kmY
-        distances=np.abs( deg2kmX*(xi[k] - x) + 1j*deg2kmY*(yi[k] - y))
-        indx[k]=np.argmin(distances)
-    return indx
-    
+nargin = len(sys.argv) - 1
 
 flin=sys.argv[1]
+
+IsVel=(flin[-6:-3]=="vel")
 
 mshfl=sys.argv[2]
 meshslash=mshfl.rfind('/')+1
 weights_file="STOFS.wght."+mshfl[meshslash:len(mshfl)-4]+".nc"
 
 flout=sys.argv[3]
-varname=sys.argv[4]
-
+varname0=sys.argv[4]
+varname=varname0.split(":")
+#
+ExtrapMethod=0 # no extrapolation
+if nargin>4:
+    ExtrapMethod=int(sys.argv[5])
+if ExtrapMethod==0:
+    print("no extrapolation")
+if ExtrapMethod==1:
+    print("extrapolation from nearest valid point in source- can be slow if source mesh is much larger than destination mesh")
+if ExtrapMethod==2:
+    print("extrapolation from nearest valid point in destination (interpolated field)")
 
 with xr.open_dataset(weights_file) as ds_s:
    # Standard sparse storage uses 'row', 'col', and 'data' variables
@@ -75,44 +58,55 @@ nni=len(xi)
 
 data = nc.Dataset(flin,"r")
 
-#var=np.asarray(data[varname][:,:])
 time=np.asarray(data["time"][:])
 x=np.asarray(data["x"][:])
+#shift to RWPS convention
 j=np.where(x>90)
 x[j]=x[j]-360.
 y=np.asarray(data["y"][:])
+
 n1=len(x)
 nt=len(time)
+nt=4
+time=time[0:nt]
+print(time)
 
-vari=np.zeros((nt,nni))
-IsExtrap=np.zeros((nt,nni),dtype=int)
-#for i in range(0, 50, 7):
-fill_value0=data[varname]._FillValue
-print("fill value="+str(fill_value0))
+nvar=len(varname)
+vari=np.zeros((nvar,nt,nni))
+
+if ExtrapMethod>0:
+    IsExtrap=np.zeros((nvar,nt,nni),dtype=int)
+
 nan=float("nan")
-extrapolate=False
-extrapolate=True
-for k in range(nt):
-    print("interpolating for time step = "+str(k)+" of "+str(nt))
-    var=np.asarray(data[varname][k,:])
-    j=np.where(var==fill_value0)
-    var[j]=nan
-    #_FillValue    = -99999
-    print(var.shape)
-    print(vari.shape)
-    print(matrix.shape)
-    vari[k,:] = matrix @ var
-    if extrapolate:
-        #extrapolate using nearest neighbor
-        jd=np.where(np.isnan(vari[k,:]))
-        js=np.where(~np.isnan(var))
-        srcp=np.array((x[js],y[js]))
-        srcv=var[js]
-        dstp=np.array((xi[jd],yi[jd]))
-        interp = NearestNDInterpolator(srcp.T,srcv)
-        ExtrapVals = interp( dstp.T )
-        vari[k,jd]=ExtrapVals
-        IsExtrap[k,jd]=1
+    
+for jv in range(nvar):
+    fill_value0=data[varname[jv]]._FillValue
+    print("fill value="+str(fill_value0))
+    for k in range(nt):
+        print("interpolating for time step = "+str(k)+" of "+str(nt))
+        var=np.asarray(data[varname[jv]][k,:])
+        #replace fill with nan to avoid interpolating fill
+        j=np.where(var==fill_value0)
+        var[j]=nan
+        vari[jv,k,:] = matrix @ var
+        if ExtrapMethod>0:
+            jd=np.where(np.isnan(vari[jv,k,:]))
+            dstp=np.array((xi[jd],yi[jd]))
+            if ExtrapMethod==1:
+            #extrapolate using nearest neighbor of source with valid value
+                js=np.where(~np.isnan(var))
+                srcp=np.array((x[js],y[js]))
+                srcv=var[js]
+            if ExtrapMethod==2:
+            #extrapolate using nearest neighbor of interpolated fielf with valid value
+                js=np.where(~np.isnan(vari[jv,k,:]))
+                srcp=np.array((xi[js],yi[js]))
+                tmp=vari[jv,k,js]
+                srcv=tmp.flatten()
+            interp = NearestNDInterpolator(srcp.T,srcv)
+            ExtrapVals = interp( dstp.T )
+            vari[jv,k,jd]=ExtrapVals
+            IsExtrap[jv,k,jd]=1
 
 print("nn(target mesh) = "+str(nni)+": Nrows = "+str(Nrows))
 print("nn(source mesh) = "+str(n1)+": Ncols = "+str(Ncols))
@@ -158,19 +152,32 @@ with nc.Dataset(flout, 'w', format='NETCDF4') as ncout:
     tri_var.standard_name = 'element list'
     tri_var[:]=np.transpose(ei)
 
-    zeta_var=ncout.createVariable(varname, 'f8', ('time','node'),fill_value    = fill_value0)
-    zeta_var.long_name     = 'water surface elevation above geoid'
-    zeta_var.units         = 'm'
-    zeta_var.standard_name = 'sea_surface_height_above_geoid'
-    zeta_var.location = 'node'
-    zeta_var[:,:]=vari[:,:]
-    
-    xtrp_var=ncout.createVariable('IsExtrap', 'i4', ('time','node'),fill_value    = fill_value0)
-    xtrp_var.long_name     = '==1 if the interpolated value extrapolated'
-    xtrp_var.standard_name = 'is extrapolated'
-    xtrp_var.location = 'node'
-    xtrp_var[:,:]=IsExtrap[:,:]
-    
+    for jv in range(nvar):
+        print("writing output for :"+varname[jv])
+        varin = data[varname[jv]]
+        units = varin.units 
+        standard_name = varin.standard_name
+        long_name = varin.long_name
+        location = 'node' 
+
+        F_var=ncout.createVariable(varname[jv], 'f8', ('time','node'),fill_value = fill_value0)
+        F_var.long_name     = long_name
+        F_var.units         = units
+        F_var.standard_name = standard_name
+        F_var.location      = location
+        F_var[:,:]          = vari[jv,:,:]
+        
+        if ExtrapMethod > 0 :
+            xtrp_var=ncout.createVariable(varname[jv]+'IsExtrap', 'i1', ('time','node'))
+            xtrp_var.long_name     = '==1 if the interpolated value extrapolated. 0 if interpolated'
+            xtrp_var.standard_name = 'is extrapolated'
+            xtrp_var.location      = 'node'
+            if ExtrapMethod == 1:
+                xtrp_var.method        = 'nearest valid neighbor in source field'
+            if ExtrapMethod == 2:
+                xtrp_var.method        = 'nearest valid neighbor in interpolated field'
+            xtrp_var[:,:]          = IsExtrap[jv,:,:]
+
     
     ncout.close
 
