@@ -32,6 +32,7 @@ if nargin ==3 :
 if nargin == 4:
     jobID=int(sys.argv[3])
     Njobs=int(sys.argv[4])
+    
 
 #if nargin==6 then do the interpolation weight calculation for a specified window
 else:
@@ -61,14 +62,25 @@ nni=len(xi)
 # the same number of destination nodes and/or the same number of source elements
 # will implement as function shortly
 if nargin <  5:
-    Wdom=np.floor(np.min(xi))-1
-    Edom=np.ceil( np.max(xi))+1
-    lonW=Wdom+(Edom-Wdom)*jobID/(Njobs-1)
-    lonE=Wdom+(Edom-Wdom)*(jobID+1)/(Njobs-1)
+# balance node load for     
+    xis=np.sort(xi)
+    mm=round(nni/N)
+    xil=xis[range(0,nni,mm)]
+    lonW=xil[jobID]
+    if jobID==Njobs-1:
+        lonE=xis[-1]+1.
+    else
+        lonE=xil[jobID+1]
+    if jobID==0:
+        lonW=xis[0]-1.
+    
+#    Wdom=np.floor(np.min(xi))-1
+#    Edom=np.ceil( np.max(xi))+1
+#    lonW=Wdom+(Edom-Wdom)*jobID/(Njobs-1)
+#    lonE=Wdom+(Edom-Wdom)*(jobID+1)/(Njobs-1)
 
     latS=np.floor(np.min(yi))-1
     latN=np.ceil(np.max(yi))+1
-    
 
 data = nc.Dataset(flin,"r")
 #read spaital dimensions and determine if input mesh is curvilinear or regular

@@ -317,7 +317,7 @@ def WriteInterpJobscript(fl,flin,mshfl,Njobs, ComputeNodes):
         f.write("srun python GeoSubsetInterpolateSTOFS.py "+flin+" "+mshfl+" $SLURM_ARRAY_TASK_ID " + str(Njobs)+" > InterpJob.$SLURM_ARRAY_TASK_ID.out \n")
         f.write("wait\n")
         f.write("# concatonate different parts of the mesh to common text file \n")
-        f.write("cat "+TmpOutDir+"/Part.IntrpWghts.*.txt > "+WghtFl)
+        f.write("cat "+TmpOutDir+"/Part.IntrpWghts.*.txt > "+WghtFl+" \n")
         f.write("# convert output weights to netcdf file \n")
         f.write("python ConvertWeights2NetCDF.py "+flin+" "+mshfl+" \n")
 
