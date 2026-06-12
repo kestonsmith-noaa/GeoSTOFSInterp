@@ -319,19 +319,16 @@ def WriteInterpJobscript(fl,flin,mshfl,Njobs, ComputeNodes):
         f.write("# concatonate different parts of the mesh to common text file \n")
         f.write("cat "+TmpOutDir+"/Part.IntrpWghts.*.txt > "+WghtFl+" \n")
         f.write("# convert output weights to netcdf file \n")
-        f.write("python ConvertWeights2NetCDF.py "+flin+" "+mshfl+" \n")
+        f.write("python ConvertWeights2Netcdf.py "+flin+" "+mshfl+" \n")
 
             
     flintrp="STOFS.to."+mshfl[meshslash:len(mshfl)-4]+".sh"
-    flout=flin[0:-3]+".rwps.nc"
+    flout=flin[0:-2]+mshfl[meshslash:len(mshfl)-4]+".nc"
     flinuv=flin[0:-3]+".vel.nc"
-    floutu=flinuv[0:-3]+".rwps.u.nc"
-    floutv=flinuv[0:-3]+".rwps.v.nc"
+    floutuv=flinuv[0:-2]+mshfl[meshslash:len(mshfl)-4]+".nc"
     with open(flintrp, 'w') as f:
-        #yi[k]=float(values[4])
         f.write("#!/bin/bash \n")
         f.write("#SBATCH --job-name=STOFS_interp_masterscript \n")
-#        f.write("#SBATCH --ntasks="+str(N)+" \n")
         f.write(" \n")
         f.write("module purge \n")
         f.write("module use /scratch4/NCEPDEV/marine/Ali.Salimi/Hera_Data/HR4-OPT/FromJessica/Keston/ICunstructuredRuns15km-implicit-450s/global-workflow/sorc/ufs_model.fd/modulefiles \n")
@@ -341,7 +338,7 @@ def WriteInterpJobscript(fl,flin,mshfl,Njobs, ComputeNodes):
         f.write("pip list \n")
         f.write("# calculate interpolation weights in parallel geographically \n")
         f.write("python InterpolateSTOFS.py "+flin+" "+mshfl+" "+flout+" zeta 2\n")
-        f.write("python InterpolateSTOFS.py "+flinuv+" "+mshfl+" "+floutu+" u-vel:v-vel 2\n")
+        f.write("python InterpolateSTOFS.py "+flinuv+" "+mshfl+" "+floutuv+" u-vel:v-vel 2\n")
 
 #-rw-r----- 1 keston keston 12G Jun  9 14:45 stofs.20260608.00/stofs.cwl.nc
 #-rw-r----- 1 keston keston 25G Jun  9 14:58 stofs.20260608.00/stofs.cwl.vel.nc

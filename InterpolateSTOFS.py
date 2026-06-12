@@ -67,8 +67,8 @@ y=np.asarray(data["y"][:])
 
 n1=len(x)
 nt=len(time)
-nt=4
-time=time[0:nt]
+#nt=4
+#time=time[0:nt]
 print(time)
 
 nvar=len(varname)
