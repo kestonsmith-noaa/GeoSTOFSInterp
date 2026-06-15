@@ -2,11 +2,36 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
-import datetime
+from datetime import datetime
 import numpy as np
 import netCDF4 as nc
 import sys
 import re
+
+#Convert Time to "seconds since 1970-01-01 00:00:00.0"
+#eg   'seconds since 2024-04-04 12:00:00        ! NCDASE - BASE_DAT'
+def ConvertTimeToUnixTime(flin):
+    data = nc.Dataset(flin,"r")
+    timevar=data["time"]
+    time=np.asarray(data["time"][:])
+    epoch_1970 = datetime(1970, 1, 1, 0, 0, 0)
+    TimeUnitsString=timevar.units
+    TimeUnitsStrings=TimeUnitsString.split(" ")
+    tunits=TimeUnitsStrings[0]
+    dstr=TimeUnitsStrings[2]
+    dstr=dstr.split("-")
+    tstr=TimeUnitsStrings[3]
+    tstr=tstr.split(":")
+    base_date = datetime(int(dstr[0]),int(dstr[1]),int(dstr[2]),int(tstr[0]),int(tstr[1]),int(tstr[2]))
+    base_offset = int((base_date - epoch_1970).total_seconds())
+    if tunits=="seconds":
+        unix_time = time + base_offset
+    if tunits=="days":
+        unix_time = time*24*60*60 + base_offset
+    if tunits=="hours":
+        unix_time = time*60*60 + base_offset
+    unix_time = time + base_offset
+    return unix_time
 
 
 knts2mps=1./1.94384001
