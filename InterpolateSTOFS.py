@@ -37,8 +37,11 @@ varname=varname0.split(":")
 ExtrapMethod=0 # no extrapolation
 if nargin>4:
     ExtrapMethod=int(sys.argv[5])
+    
+if ExtrapMethod==-1:
+    print("no extrapolation, nan left in place in output")
 if ExtrapMethod==0:
-    print("no extrapolation")
+    print("Fill missing values in interpolated field with value 0")
 if ExtrapMethod==1:
     print("extrapolation from nearest valid point in source- can be slow if source mesh is much larger than destination mesh")
 if ExtrapMethod==2:
@@ -80,7 +83,7 @@ print(time)
 nvar=len(varname)
 vari=np.zeros((nvar,nt,nni))
 
-if ExtrapMethod>0:
+if ExtrapMethod>=0:
     IsExtrap=np.zeros((nvar,nt,nni),dtype=int)
 
 nan=float("nan")
@@ -113,7 +116,13 @@ for jv in range(nvar):
             ExtrapVals = interp( dstp.T )
             vari[jv,k,jd]=ExtrapVals
             IsExtrap[jv,k,jd]=1
-
+            
+if ExtrapMethod==0:
+    jd=np.where(np.isnan(vari))
+    vari[jd]==0.
+    IsExtrap[jd]=1
+            
+            
 print("nn(target mesh) = "+str(nni)+": Nrows = "+str(Nrows))
 print("nn(source mesh) = "+str(n1)+": Ncols = "+str(Ncols))
 if not ((nni==Nrows) and (n1==Ncols)):
@@ -182,11 +191,13 @@ with nc.Dataset(flout, 'w', format='NETCDF4') as ncout:
         F_var.location      = location
         F_var[:,:]          = vari[jv,:,:]
         
-        if ExtrapMethod > 0 :
+        if ExtrapMethod >= 0 :
             xtrp_var=ncout.createVariable(varname[jv]+'IsExtrap', 'i1', ('time','node'))
             xtrp_var.long_name     = '==1 if the interpolated value extrapolated. 0 if interpolated'
             xtrp_var.standard_name = 'is extrapolated'
             xtrp_var.location      = 'node'
+            if ExtrapMethod == 0:
+                xtrp_var.method        = 'Interpolated nan values replaced with 0'
             if ExtrapMethod == 1:
                 xtrp_var.method        = 'nearest valid neighbor in source field'
             if ExtrapMethod == 2:
