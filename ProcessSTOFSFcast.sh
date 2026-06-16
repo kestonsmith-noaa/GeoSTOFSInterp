@@ -29,16 +29,19 @@ pip list -v
 ##cycl="00"
 date=$1
 cycl=$2
+mesh=$3
 
-mesh=meshes/RWPS.V0a.msh
-outdir=rwps.V0a.$date.$cycl
+#mesh="../meshes/RWPS.V0a.small.msh"
+
+meshname="${mesh##*/}"
+meshname="${meshname: 0: -4}"
+
+outdir=$mesh.$date.$cycl
 
 stofsele=stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.nc
 stofsvel=stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.vel.nc
-rwpsele=$outdir/rwps.stofs.$date.$cycl.cwl.nc
-rwpsvel=$outdir/rwps.stofs.$date.$cycl.cwl.vel.nc
-
-
+rwpsele=$outdir/stofs.$date.$cycl.cwl.nc
+rwpsvel=$outdir/stofs.$date.$cycl.cwl.vel.nc
 
 mkdir $outdir
 
