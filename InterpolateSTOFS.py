@@ -18,6 +18,12 @@ import datetime
 # or:
 # python InterpolateSTOFS.py stofs.20260608.00/stofs.cwl.nc meshes/RWPS.V0a.small.msh tesdtoZ.vel.nc zeta 1
 #
+# ExtrapMethod =-2 no missing values in source field replaced with 0
+# ExtrapMethod =-1 no extrapolation, NaN's potentially in output where source field is dry
+# ExtrapMethod = 0 NaN values in interpolated field replaced with 0.0
+# ExtrapMethod = 1 Nearest Neighbor extrapolation from valid source values
+# ExtrapMethod = 2 Nearest Neighbor extrapolation from valid interpolated values
+# ExtrapMethod = 3 Nearest Neighbor extrapolation from interpolated nodes which allways have valid values (faster)
 
 UseUnixTime=True
 nargin = len(sys.argv) - 1
@@ -85,6 +91,9 @@ vari=np.zeros((nvar,nt,nni))
 
 if ExtrapMethod>=0:
     IsExtrap=np.zeros((nvar,nt,nni),dtype=int)
+    
+if ExtrapMethod==3:
+    AnyExtrap=np.zeros((nvar,nni),dtype=int)
 
 nan=float("nan")
     
@@ -97,8 +106,11 @@ for jv in range(nvar):
         #replace fill with nan to avoid interpolating fill
         j=np.where(var==fill_value0)
         var[j]=nan
+        if ExtrapMethod==-2:
+            j=np.where(np.isnan(var))
+            var[j]=0.
         vari[jv,k,:] = matrix @ var
-        if ExtrapMethod>0:
+        if ExtrapMethod>0 and ExtrapMethod<3:
             jd=np.where(np.isnan(vari[jv,k,:]))
             dstp=np.array((xi[jd],yi[jd]))
             if ExtrapMethod==1:
@@ -107,7 +119,7 @@ for jv in range(nvar):
                 srcp=np.array((x[js],y[js]))
                 srcv=var[js]
             if ExtrapMethod==2:
-            #extrapolate using nearest neighbor of interpolated fielf with valid value
+            #extrapolate using nearest neighbor of interpolated field with valid value
                 js=np.where(~np.isnan(vari[jv,k,:]))
                 srcp=np.array((xi[js],yi[js]))
                 tmp=vari[jv,k,js]
@@ -116,11 +128,32 @@ for jv in range(nvar):
             ExtrapVals = interp( dstp.T )
             vari[jv,k,jd]=ExtrapVals
             IsExtrap[jv,k,jd]=1
-            
+        if ExtrapMethod==3: # Fast posthoc extrapolator
+            jd=np.where(np.isnan(vari[jv,k,:]))
+            AnyExtrap[jv,jd]=1.
+
 if ExtrapMethod==0:
     jd=np.where(np.isnan(vari))
     vari[jd]==0.
     IsExtrap[jd]=1
+    
+if ExtrapMethod==3: #posthoc extrapolation from points which are valid at all times
+    for jv in range(nvar):
+        jd=np.where(AnyExtrap[jv,:]==1) # nodes that have some "nan" intrepolated values
+        js=np.where(AnyExtrap[jv,:]==0) # nodes that have no "nan" intrepolated values
+        srcp = np.array((xi[js],yi[js])).T
+        srcv = vari[jv,0,js] #dummy input field
+        dstp = np.array((xi[jd],yi[jd])).T
+        srcv=srcv[0,:]
+        interpolator = NearestNDInterpolator(srcp, srcv)
+        distances, jsrc = interpolator.tree.query(dstp)
+        jd=jd[0]
+        for k in range(nt):
+            jdk=np.where(np.isnan(vari[jv,k,jd]))
+            jdk=jdk[0]
+            vari[jv,k,jd[jdk]]=vari[jv,k,jsrc[jdk]]
+            IsExtrap[jv,k,jd[jdk]]=1
+
             
             
 print("nn(target mesh) = "+str(nni)+": Nrows = "+str(Nrows))
