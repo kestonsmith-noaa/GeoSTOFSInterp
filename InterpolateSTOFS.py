@@ -18,7 +18,7 @@ import datetime
 # or:
 # python InterpolateSTOFS.py stofs.20260608.00/stofs.cwl.nc meshes/RWPS.V0a.small.msh tesdtoZ.vel.nc zeta 1
 #
-# ExtrapMethod =-2 no missing values in source field replaced with 0
+# ExtrapMethod =-2 missing values in source field replaced with 0
 # ExtrapMethod =-1 no extrapolation, NaN's potentially in output where source field is dry
 # ExtrapMethod = 0 NaN values in interpolated field replaced with 0.0
 # ExtrapMethod = 1 Nearest Neighbor extrapolation from valid source values
@@ -44,6 +44,8 @@ ExtrapMethod=0 # no extrapolation
 if nargin>4:
     ExtrapMethod=int(sys.argv[5])
     
+if ExtrapMethod==-2:
+    print("missing values in source field replaced with 0 and remaining missing values in interpolated field (outside of source footprint) with value 0 ")
 if ExtrapMethod==-1:
     print("no extrapolation, nan left in place in output")
 if ExtrapMethod==0:
@@ -81,6 +83,7 @@ y=np.asarray(data["y"][:])
 
 n1=len(x)
 nt=len(time)
+
 #nt=4
 #time=time[0:nt]
 
@@ -89,7 +92,7 @@ print(time)
 nvar=len(varname)
 vari=np.zeros((nvar,nt,nni))
 
-if ExtrapMethod>=0:
+if ( ExtrapMethod>0 or  ExtrapMethod==-2):
     IsExtrap=np.zeros((nvar,nt,nni),dtype=int)
     
 if ExtrapMethod==3:
@@ -132,7 +135,7 @@ for jv in range(nvar):
             jd=np.where(np.isnan(vari[jv,k,:]))
             AnyExtrap[jv,jd]=1.
 
-if ExtrapMethod==0:
+if ( ExtrapMethod==0 or ExtrapMethod==-2 ):
     jd=np.where(np.isnan(vari))
     vari[jd]==0.
     IsExtrap[jd]=1

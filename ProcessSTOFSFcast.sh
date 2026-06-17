@@ -22,35 +22,34 @@ module load ve/hafs/2.1
 pip list -v
 
 
-#Script interpolates STOFS velocity and elevation to RWPS mesh for forcing
+##Script interpolates STOFS velocity and elevation to RWPS mesh for forcing
 
 
 ##date="20260527"
 ##cycl="00"
+##mesh="../meshes/RWPS.V0a.small.msh"
+
 date=$1
 cycl=$2
 mesh=$3
 
-#mesh="../meshes/RWPS.V0a.small.msh"
-
 meshname="${mesh##*/}"
 meshname="${meshname: 0: -4}"
 
-outdir=$mesh.$date.$cycl
+outdir=$meshname.$date.$cycl
 
-stofsele=stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.nc
-stofsvel=stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.vel.nc
-rwpsele=$outdir/stofs.$date.$cycl.cwl.nc
-rwpsvel=$outdir/stofs.$date.$cycl.cwl.vel.nc
+stofsele="stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.nc"
+stofsvel="stofs.$date.$cycl/stofs_2d_glo.t"$cycl"z.fields.cwl.vel.nc"
+rwpsele="$outdir/stofs.$date.$cycl.cwl.nc"
+rwpsvel="$outdir/stofs.$date.$cycl.cwl.vel.nc"
 
 mkdir $outdir
 
-python3 InterpolateSTOFS.py $stofsele $mesh $rwpsele zeta 2
-python3 InterpolateSTOFS.py $stofsvel $mesh $rwpsvel u-vel:v-vel 2
+echo "stofs  outdir=$outdir"
+echo "stofs    mesh=$mesh"
+echo "stofs rwpsele=$rwpsele"
+echo "stofs rwpsvel=$rwpsvel"
 
-
-
-#stofs.20260610.00/stofs_2d_glo.t00z.fields.cwl.nc
-#stofs.20260610.00/stofs_2d_glo.t00z.fields.cwl.vel.nc
-#meshes/RWPS.V0a.msh
+python InterpolateSTOFS.py $stofsele $mesh $rwpsele zeta -2
+python InterpolateSTOFS.py $stofsvel $mesh $rwpsvel u-vel:v-vel -2
 
