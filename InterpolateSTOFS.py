@@ -18,7 +18,7 @@ import datetime
 # or:
 # python InterpolateSTOFS.py stofs.20260608.00/stofs.cwl.nc meshes/RWPS.V0a.small.msh tesdtoZ.vel.nc zeta 1
 #
-# ExtrapMethod =-2 missing values in source field replaced with 0
+# ExtrapMethod =-2 no missing values in source field replaced with 0
 # ExtrapMethod =-1 no extrapolation, NaN's potentially in output where source field is dry
 # ExtrapMethod = 0 NaN values in interpolated field replaced with 0.0
 # ExtrapMethod = 1 Nearest Neighbor extrapolation from valid source values
@@ -44,8 +44,6 @@ ExtrapMethod=0 # no extrapolation
 if nargin>4:
     ExtrapMethod=int(sys.argv[5])
     
-if ExtrapMethod==-2:
-    print("missing values in source field replaced with 0 and remaining missing values in interpolated field (outside of source footprint) with value 0 ")
 if ExtrapMethod==-1:
     print("no extrapolation, nan left in place in output")
 if ExtrapMethod==0:
@@ -66,7 +64,7 @@ matrix = sp.coo_matrix((weights, (row-1, col-1)), shape=(Nrows,Ncols)).tocsr()
 print("sparse interpolation matrix")
 print(matrix)
 
-xi, yi, ei = mshutil.loadWW3Mesh(mshfl)
+xi, yi, ei, zi = mshutil.loadWW3Mesh(mshfl)
 nni=len(xi)
 
 data = nc.Dataset(flin,"r")
@@ -83,7 +81,6 @@ y=np.asarray(data["y"][:])
 
 n1=len(x)
 nt=len(time)
-
 #nt=4
 #time=time[0:nt]
 
@@ -92,7 +89,7 @@ print(time)
 nvar=len(varname)
 vari=np.zeros((nvar,nt,nni))
 
-if ( ExtrapMethod>0 or  ExtrapMethod==-2):
+if ExtrapMethod>=0:
     IsExtrap=np.zeros((nvar,nt,nni),dtype=int)
     
 if ExtrapMethod==3:
@@ -135,7 +132,7 @@ for jv in range(nvar):
             jd=np.where(np.isnan(vari[jv,k,:]))
             AnyExtrap[jv,jd]=1.
 
-if ( ExtrapMethod==0 or ExtrapMethod==-2 ):
+if ExtrapMethod==0:
     jd=np.where(np.isnan(vari))
     vari[jd]==0.
     IsExtrap[jd]=1
@@ -168,6 +165,16 @@ if not ((nni==Nrows) and (n1==Ncols)):
     " but number of columns in "+ weights_file +" = "+str(Ncols)  )
     print("  You may need to regnerate file "+ weights_file +" with appropriate weights")
 
+VarianceDeep=100.
+VarianceShallow=1.
+Variance = VarianceShallow + (VarianceDeep-VarianceShallow)*(zi-50.)/(250.-50.)
+js=np.where(Variance<VarianceShallow)
+Variance[js]=VarianceShallow
+jd=np.where(Variance>VarianceDeep)
+Variance[jd]=VarianceDeep
+ErrorVariance=np.zeros((nt,nni))
+for k in range(nt):
+    ErrorVariance[k,:]=Variance
 
 ne=ei.shape[0]
 with nc.Dataset(flout, 'w', format='NETCDF4') as ncout:
@@ -241,6 +248,13 @@ with nc.Dataset(flout, 'w', format='NETCDF4') as ncout:
             xtrp_var[:,:]          = IsExtrap[jv,:,:]
 
     
+    ErrorVariance_var=ncout.createVariable('ErrorVariance', 'f4', ('time','node'),fill_value    = fill_value0)
+    ErrorVariance_var.long_name     = 'forecast error variance'
+    ErrorVariance_var.units         = units+"**2"
+    ErrorVariance_var.standard_name = 'variance'
+    ErrorVariance_var[:,:]=ErrorVariance
+    
+
     ncout.close
 
 

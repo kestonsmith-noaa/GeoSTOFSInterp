@@ -10,10 +10,13 @@ import re
 
 #Convert Time to "seconds since 1970-01-01 00:00:00.0"
 #eg   'seconds since 2024-04-04 12:00:00        ! NCDASE - BASE_DAT'
-def ConvertTimeToUnixTime(flin):
+def ConvertTimeToUnixTime(flin,TimeVarName = None):
+    if TimeVarName == None:
+        TimeVarName="time"
     data = nc.Dataset(flin,"r")
-    timevar=data["time"]
-    time=np.asarray(data["time"][:])
+    print("TimeVarName = "+TimeVarName)
+    timevar=data[TimeVarName]
+    time=np.asarray(data[TimeVarName][:])
     epoch_1970 = datetime(1970, 1, 1, 0, 0, 0)
     TimeUnitsString=timevar.units
     TimeUnitsStrings=TimeUnitsString.split(" ")
@@ -30,7 +33,6 @@ def ConvertTimeToUnixTime(flin):
         unix_time = time*24*60*60 + base_offset
     if tunits=="hours":
         unix_time = time*60*60 + base_offset
-    unix_time = time + base_offset
     return unix_time
 
 
@@ -141,7 +143,7 @@ def loadWW3Mesh(fl):
     ei=eix[range(k),:]
     print("number of open boundary nodes read: "+str(nbnd))
     print("number of elements read: "+str(k))
-    return xi, yi, ei
+    return xi, yi, ei, zi
 
 
 import numpy as np
