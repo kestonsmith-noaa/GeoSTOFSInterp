@@ -205,8 +205,8 @@ data = nc.Dataset(flin,"r")
 x1=np.asarray(data["Longitude"][:])
 y1=np.asarray(data["Latitude"][:])
 # last RTOFS row is degenerate
-x1=x1[0:-1,0:-1]
-y1=y1[0:-1,0:-1]
+x1=x1[1:-1,1:-1]
+y1=y1[1:-1,1:-1]
 print(y1.shape)
 if (len(x1.shape)==2 and len(y1.shape)==2):
     IsCrvLn=True
@@ -224,7 +224,10 @@ if np.mean(np.mean(x1))<0:
 #######################################
 
 meshslash=mshfl.rfind('/')+1
-flins=flin.split("_")
+
+flinslash=flin.rfind('/')+1
+flint=flin[flinslash : ]
+flins=flint.split("_")
 model=flins[0]
 dom=flins[1]
 weights_file = "InterpolationWeights."+mshfl[meshslash:-3]+model+"."+dom+".nc"
@@ -285,9 +288,9 @@ Vp=np.zeros((nt,n1))+nan
 fill_value0=data["u_velocity"]._FillValue
 print("fill value="+str(fill_value0))
 for k in range(nt):
-    U=data["u_velocity"][k,0,0:-1,0:-1]
+    U=data["u_velocity"][k,0,1:-1,1:-1]
     Up[k,:]=np.transpose(U).reshape(n1)
-    V=data["v_velocity"][k,0,0:-1,0:-1]
+    V=data["v_velocity"][k,0,1:-1,1:-1]
     Vp[k,:]=np.transpose(V).reshape(n1)
 
 j=np.where( Up==fill_value0 )
